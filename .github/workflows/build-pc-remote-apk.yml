@@ -9,12 +9,12 @@ on:
       - '.github/workflows/build-pc-remote-apk.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,7 +39,11 @@ jobs:
           test -f PC-Remote-Android/PC_REMOTE_BRIDGE.ps1
       - name: Build Android debug APK
         run: gradle --no-daemon -p PC-Remote-Android assembleDebug
-      - name: Publish APK and Windows agent
+      - name: Verify APK exists
+        run: |
+          test -s PC-Remote-Android/app/build/outputs/apk/debug/app-debug.apk
+          sha256sum PC-Remote-Android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Publish APK and Windows agent as artifact
         uses: actions/upload-artifact@v4
         with:
           name: PC-Remote-APK-i-Windows
@@ -48,3 +52,15 @@ jobs:
           path: |
             PC-Remote-Android/app/build/outputs/apk/debug/app-debug.apk
             PC-Remote-Android/PC_REMOTE_BRIDGE.ps1
+      - name: Put installable APK on dedicated repository branch
+        if: github.ref == 'refs/heads/pc-remote-android-20261020'
+        shell: bash
+        run: |
+          cp PC-Remote-Android/app/build/outputs/apk/debug/app-debug.apk PC-Remote-Android.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PC-Remote-Android.apk
+          if ! git diff --cached --quiet; then
+            git commit -m "Build PC Remote Android installable debug APK [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
