@@ -1,0 +1,74 @@
+name: Build PC Remote 2.1 APK
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - pc-remote-v21-20261020
+    paths:
+      - 'PC-Remote-Android/v21_android.patch.gz.b64'
+      - '.github/workflows/build-pc-remote-v21-apk.yml'
+permissions:
+  contents: write
+jobs:
+  android-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Record build run ID
+        shell: bash
+        continue-on-error: true
+        run: |
+          printf 'run_id=%s\nrun_url=https://github.com/%s/actions/runs/%s\n' "$GITHUB_RUN_ID" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > PC-Remote-v21-build-info.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PC-Remote-v21-build-info.txt
+          git commit -m "Record Android 2.1 build run [skip ci]" || true
+          git push origin "HEAD:${GITHUB_REF_NAME}" || true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Expand Android project v1 + v2 + v2.1
+        shell: bash
+        run: |
+          base64 -d PC-Remote-Android/source.tar.xz.b64 > /tmp/baseline.tar.xz
+          echo '5370fc6f65b69334ebd4ddb1f58c375a8406fa07450199fb191b267bc5f23aa4  /tmp/baseline.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/baseline.tar.xz -C PC-Remote-Android
+          base64 -d PC-Remote-Android/v2_android.patch.gz.b64 | gzip -dc > /tmp/v2.patch
+          cd PC-Remote-Android
+          patch --batch -p1 < /tmp/v2.patch
+          base64 -d v21_android.patch.gz.b64 | gzip -dc > /tmp/v21.patch
+          patch --batch -p1 < /tmp/v21.patch
+          grep -q 'KONFIGURACJA POŁĄCZENIA' app/src/main/java/pl/pcnotifier/remote/MainActivity.java
+          grep -q "applicationId 'pl.pcnotifier.remote.v21'" app/build.gradle
+      - name: Build Android APK
+        run: gradle --no-daemon -p PC-Remote-Android assembleDebug
+      - name: Verify APK
+        shell: bash
+        run: |
+          test -s PC-Remote-Android/app/build/outputs/apk/debug/app-debug.apk
+          cp PC-Remote-Android/app/build/outputs/apk/debug/app-debug.apk PC-Remote-Android-v21.apk
+          ls -lh PC-Remote-Android-v21.apk
+          sha256sum PC-Remote-Android-v21.apk
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PC-Remote-2_1-Android-APK
+          if-no-files-found: error
+          retention-days: 30
+          path: PC-Remote-Android-v21.apk
+      - name: Publish APK in dedicated branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PC-Remote-Android-v21.apk
+          git commit -m "Publish PC Remote 2.1 APK [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
