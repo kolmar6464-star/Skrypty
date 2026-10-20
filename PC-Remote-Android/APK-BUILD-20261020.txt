@@ -1,0 +1,3 @@
+Budowanie APK PC Remote uruchomione 2026-10-20.
+Wynik: GitHub Actions -> Build PC Remote APK -> artifacts: PC-Remote-APK-i-Windows.
+Nie zawiera danych parowania.
