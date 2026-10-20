@@ -1,0 +1,82 @@
+name: Build PC Remote 2 APK
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - pc-remote-v2-20261020
+    paths:
+      - 'PC-Remote-Android/v2_android.patch.gz.b64'
+      - '.github/workflows/build-pc-remote-v2-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  android-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Record Actions run ID
+        continue-on-error: true
+        shell: bash
+        run: |
+          printf 'run_id=%s\nrun_url=https://github.com/%s/actions/runs/%s\n' "$GITHUB_RUN_ID" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > PC-Remote-v2-build-info.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PC-Remote-v2-build-info.txt
+          git commit -m "Record PC Remote 2 APK build run [skip ci]" || true
+          git push origin "HEAD:${GITHUB_REF_NAME}" || true
+      - name: Install Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - name: Gradle 8.10.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Extract baseline Android sources
+        shell: bash
+        run: |
+          base64 -d PC-Remote-Android/source.tar.xz.b64 > /tmp/src.tar.xz
+          echo '5370fc6f65b69334ebd4ddb1f58c375a8406fa07450199fb191b267bc5f23aa4  /tmp/src.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/src.tar.xz -C PC-Remote-Android
+      - name: Apply Android 2.0 changes
+        shell: bash
+        run: |
+          base64 -d PC-Remote-Android/v2_android.patch.gz.b64 | gzip -dc > /tmp/v2.patch
+          cd PC-Remote-Android
+          patch --batch -p1 < /tmp/v2.patch
+          grep -q 'PRZEGLĄD POWIADOMIEŃ' app/src/main/java/pl/pcnotifier/remote/MainActivity.java
+          grep -q 'versionName.*0.2.0' app/build.gradle
+          sed -i "s/applicationId 'pl.pcnotifier.remote'/applicationId 'pl.pcnotifier.remote.v2'/" app/build.gradle
+          grep -q "applicationId 'pl.pcnotifier.remote.v2'" app/build.gradle
+      - name: Compile installable Android APK
+        run: gradle --no-daemon -p PC-Remote-Android assembleDebug
+      - name: Verify result
+        shell: bash
+        run: |
+          test -s PC-Remote-Android/app/build/outputs/apk/debug/app-debug.apk
+          cp PC-Remote-Android/app/build/outputs/apk/debug/app-debug.apk PC-Remote-Android-v2.apk
+          sha256sum PC-Remote-Android-v2.apk
+      - name: Publish APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PC-Remote-Android-2-APK
+          retention-days: 30
+          if-no-files-found: error
+          path: PC-Remote-Android-v2.apk
+      - name: Publish direct-download APK to branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PC-Remote-Android-v2.apk
+          git commit -m "Release PC Remote 2.0 debug APK [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
