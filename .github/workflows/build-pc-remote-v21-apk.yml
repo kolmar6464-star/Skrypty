@@ -46,6 +46,7 @@ jobs:
           patch --batch -p1 < /tmp/v2.patch
           base64 -d v21_android.patch.gz.b64 | gzip -dc > /tmp/v21.patch
           patch --batch -p1 < /tmp/v21.patch
+          sed -i 's#https://play.google.com/store/apps/details?id=com.carriez.flutter_hbb#https://f-droid.org/packages/com.carriez.flutter_hbb/#' app/src/main/java/pl/pcnotifier/remote/MainActivity.java
           grep -q 'KONFIGURACJA POŁĄCZENIA' app/src/main/java/pl/pcnotifier/remote/MainActivity.java
           grep -q "applicationId 'pl.pcnotifier.remote.v21'" app/build.gradle
       - name: Build Android APK
