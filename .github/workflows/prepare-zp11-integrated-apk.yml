@@ -1,0 +1,28 @@
+name: Prepare single integrated RustDesk Android APK
+on:
+  push:
+    branches:
+      - build-zdalny-pulpit-11-plus-apk-20261026
+    paths:
+      - '.github/workflows/prepare-zp11-integrated-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  integrated:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download official signed Android application
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 3 --output ZdalnyPulpit11_JEDEN_APK_RustDesk_1.5.0_Android.apk             https://github.com/rustdesk/rustdesk/releases/download/1.5.0/rustdesk-1.5.0-universal-signed.apk
+          echo "b7910dea1b6ec4a079aa753e0432c2269b843d89d900c7a3930b6ec13f3ba112  ZdalnyPulpit11_JEDEN_APK_RustDesk_1.5.0_Android.apk" | sha256sum -c -
+          file ZdalnyPulpit11_JEDEN_APK_RustDesk_1.5.0_Android.apk
+          unzip -t ZdalnyPulpit11_JEDEN_APK_RustDesk_1.5.0_Android.apk >/dev/null
+      - name: Upload single ready APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZdalnyPulpit11_JEDEN_APK_Android
+          path: ZdalnyPulpit11_JEDEN_APK_RustDesk_1.5.0_Android.apk
+          if-no-files-found: error
