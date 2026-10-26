@@ -1,11 +1,11 @@
-# Zdalny Pulpit 11 PLUS (Android) — test build
+# Zdalny Pulpit 11 ID — Android 2.0
 
-Android 10+ (API 29+). Kompanion Windows EXE, pełny pulpit RustDesk oraz Tailscale są instalowane oddzielnie.
-Funkcje: zdalny screenshot PNG zapisywany do Galerii telefonu, wyłączenie/restart Windows, uruchomienie aplikacji RustDesk i wskazówki do sterowania Androidem z PC.
+Aplikacja Android stanowi prosty launcher oficjalnego RustDesk 1.5.0. Wpisujesz wyłącznie ID PC; przycisk Połącz uruchamia `rustdesk://connection/new/{ID}` w RustDesk na telefonie. ID jest zapamiętywane lokalnie.
 
-Po pierwszym uruchomieniu użytkownik wpisuje adres urządzenia Tailscale (100.64.0.0/10) i kod parowania pokazywany w instalatorze Windows. Dane są zapisywane tylko lokalnie na telefonie. Połączenia z panelem Windows są ograniczone do adresów 100.64.0.0/10 i zabezpieczone 64-znakowym tokenem; tunel Tailscale szyfruje transfer.
+Nie wymaga Tailscale ani 64-znakowego tokenu. Wymaga **pierwszego bezpiecznego uwierzytelnienia w RustDesk**. Aby nie wpisywać hasła przy każdym połączeniu, skonfiguruj hasło stałe na swoim PC i zezwól RustDesk Android zapamiętać je.
 
-Włączenie całkowicie wyłączonego komputera (Wake-on-LAN) NIE zostało jeszcze zaimplementowane. Wymaga routera/przekaźnika w domu oraz obsługi UEFI/Ethernet. Funkcja 'Włącz komputer' pokazuje instrukcję.
-APK jest podpisany standardowym kluczem debug GitHub Actions, nie kluczem produkcyjnym; nie używaj do dystrybucji publicznej bez własnego klucza podpisu.
+Działające przyciski: połączenie zdalne RustDesk poprzez ID, instrukcje screenshota Android do galerii, wyłączania/restartowania komputera w zdalnej sesji, sterowania Androidem z Windows i Wake-on-LAN.
 
-W repozytorium używana jest izolowana gałąź build-zdalny-pulpit-11-plus-apk-20261026.
+**Ograniczenia**: screenshot nie jest autonomicznie pobierany z Windows w oryginalnej rozdzielczości; Android zapisuje zdjęcie ekranu telefonu przy użyciu przycisków systemowych. Wyłączanie/restart wykonuje się w sesji RustDesk. Wake-on-LAN spoza domu wymaga infrastruktury w sieci domowej. Nie istnieje niezależna usługa przyjmująca komendy po samym ID.
+
+APK podpisany kluczem **debug** budowniczego. Aby przejść z poprzedniego Zdalny Pulpit 11 PLUS v1.1 na v2.0 może być konieczne odinstalowanie poprzedniej aplikacji (inny klucz podpisu); RustDesk pozostaje osobną aplikacją, nie trzeba go usuwać.
