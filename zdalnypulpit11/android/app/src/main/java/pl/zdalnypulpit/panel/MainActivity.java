@@ -2,204 +2,171 @@ package pl.zdalnypulpit.panel;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ContentValues;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
-import android.provider.MediaStore;
-import android.text.InputType;
+import android.text.InputFilter;
+import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
+import android.content.res.ColorStateList;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
+/**
+ * Launcher for the RustDesk public ID network.
+ * No custom authentication service, no open port, no Tailscale dependency.
+ * RustDesk itself authenticates the connection and remembers approved sessions.
+ */
 public final class MainActivity extends Activity {
-    private SharedPreferences preferences;
-    private EditText hostInput, keyInput;
-    private TextView result;
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private EditText idInput;
+    private TextView hint;
+    private SharedPreferences prefs;
 
-    @Override public void onCreate(Bundle savedState) {
-        super.onCreate(savedState);
-        preferences = getSharedPreferences("zp11", MODE_PRIVATE);
+    private int dp(float value) { return (int) (getResources().getDisplayMetrics().density * value + .5f); }
+
+    @Override public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        prefs = getSharedPreferences("zp11_id_v2", MODE_PRIVATE);
+
         ScrollView scroll = new ScrollView(this);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(28, 30, 28, 36);
-        root.setBackgroundColor(Color.rgb(242, 246, 253));
-        scroll.addView(root);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(Color.rgb(246, 248, 253));
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setPadding(dp(22), dp(28), dp(22), dp(36));
+        layout.setOrientation(LinearLayout.VERTICAL);
+        scroll.addView(layout);
         setContentView(scroll);
-        TextView title = line("Zdalny Pulpit 11 PLUS", 24);
-        title.setTypeface(null, Typeface.BOLD);
-        root.addView(title);
-        root.addView(line("Panel Windows 11 przez prywatną sieć Tailscale. Pełny zdalny pulpit: RustDesk.", 14));
 
-        hostInput = new EditText(this);
-        hostInput.setSingleLine(true);
-        hostInput.setHint("Adres Tailscale PC, np. 100.101.102.103");
-        hostInput.setText(preferences.getString("host", ""));
-        root.addView(hostInput);
+        TextView header = text("Zdalny Pulpit 11", 27, true);
+        header.setTextColor(Color.rgb(27, 46, 73));
+        layout.addView(header);
+        TextView subtitle = text("Połączenie z komputerem tylko przez ID RustDesk", 14, false);
+        layout.addView(subtitle);
 
-        keyInput = new EditText(this);
-        keyInput.setSingleLine(true);
-        keyInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        keyInput.setHint("64-znakowy kod parowania z Windows");
-        keyInput.setText(preferences.getString("key", ""));
-        root.addView(keyInput);
+        space(layout, 22);
+        TextView idLabel = text("ID KOMPUTERA", 13, true);
+        layout.addView(idLabel);
 
-        action(root, "Zapisz parowanie i sprawdź połączenie", false,
-            () -> { if (!validate()) return; preferences.edit().putString("host", hostInput.getText().toString().trim())
-                .putString("key", keyInput.getText().toString().trim()).apply();
-                request("/api/status", "GET", false); });
+        idInput = new EditText(this);
+        idInput.setSingleLine(true);
+        idInput.setTextSize(22);
+        idInput.setSelectAllOnFocus(true);
+        idInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT |
+                             android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        idInput.setFilters(new InputFilter[]{new InputFilter.LengthFilter(90)});
+        idInput.setHint("np. 123456789");
+        idInput.setText(prefs.getString("id", ""));
+        idInput.setImeOptions(EditorInfo.IME_ACTION_GO);
+        idInput.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_GO) { connect(); return true; }
+            return false;
+        });
+        layout.addView(idInput, new LinearLayout.LayoutParams(-1, dp(66)));
 
-        result = line("Połącz Tailscale na telefonie i komputerze, a następnie wprowadź dane parowania.", 14);
-        root.addView(result);
+        Button connect = button("POŁĄCZ Z KOMPUTEREM", true);
+        connect.setOnClickListener(v -> connect());
+        layout.addView(connect);
 
-        action(root, "🖥 Otwórz pełny pulpit — RustDesk", false, this::openRustDesk);
-        action(root, "📷 Zrób screenshot i zapisz w Galerii", false, () -> request("/api/screenshot", "GET", true));
-        action(root, "↻ Restart komputera", false, () -> confirm("Uruchomić komputer ponownie?", "restart"));
-        action(root, "⏻ Wyłącz komputer", true, () -> confirm("Na pewno wyłączyć komputer?", "shutdown"));
-        action(root, "⏻ Włącz komputer — Wake-on-LAN", false,
-            () -> info("Włączenie wyłączonego PC", "Funkcja wymaga urządzenia nadającego pakiet Wake-on-LAN w sieci domowej (router lub przekaźnik), skonfigurowanego BIOS/UEFI oraz karty Ethernet. Nie została jeszcze zaimplementowana w panelu."));
-        action(root, "📱 Steruj telefonem z komputera", false,
-            () -> new AlertDialog.Builder(this).setTitle("Android → Windows")
-                .setMessage("W RustDesk na Androidzie uruchom udostępnianie ekranu. Potwierdź uprawnienia systemowe, potem z Windows połącz się z ID telefonu. System Android może wymagać ponownego zatwierdzenia nagrywania ekranu.")
-                .setPositiveButton("Otwórz RustDesk", (d, b) -> openRustDesk())
-                .setNegativeButton("Zamknij", null).show());
-        root.addView(line("Dostęp wymaga Tailscale. Panel obsługuje wyłącznie adresy 100.64.0.0/10. Nie przekierowuj portu 39877 na routerze. Screenshoty: Obrazy/ZdalnyPulpit11.", 12));
+        hint = text("ID zapisze się automatycznie. Po pierwszej autoryzacji RustDesk może zapamiętać hasło na tym telefonie.", 13, false);
+        layout.addView(hint);
+
+        space(layout, 18);
+        TextView sec = text("FUNKCJE DODATKOWE", 14, true);
+        layout.addView(sec);
+
+        Button screen = button("Screenshot pulpitu → Galeria", false);
+        screen.setOnClickListener(v -> dialog("Zrzut ekranu",
+            "Po połączeniu przez RustDesk wyświetl pulpit na całym ekranie telefonu. Naciśnij jednocześnie przyciski Zasilanie + Ciszej. Android zapisze zrzut widocznego ekranu w Galerii.\n\nJest to zrzut ekranu telefonu, a nie bezpośredni obraz w rozdzielczości komputera."));
+        layout.addView(screen);
+
+        Button power = button("Wyłącz / uruchom ponownie komputer", false);
+        power.setOnClickListener(v -> new AlertDialog.Builder(this)
+            .setTitle("Zarządzanie zasilaniem Windows")
+            .setMessage("Połącz się z pulpitem przez RustDesk, otwórz menu Start → Zasilanie, a następnie wybierz Zamknij lub Uruchom ponownie.\n\nSam numer ID nie daje oddzielnej aplikacji prawa do wysyłania komend zasilania bez uwierzytelnionej sesji.")
+            .setPositiveButton("Otwórz pulpit", (d, w) -> connect())
+            .setNegativeButton("Zamknij", null).show());
+        layout.addView(power);
+
+        Button wake = button("Jak włączyć wyłączony komputer?", false);
+        wake.setOnClickListener(v -> dialog("Wake-on-LAN",
+            "Włączenie całkowicie wyłączonego komputera przez internet wymaga obsługi Wake-on-LAN w BIOS/UEFI i karcie Ethernet oraz urządzenia w sieci domowej (router lub przekaźnik), które nada pakiet budzący. Sam numer ID RustDesk nie pozwala włączyć wyłączonego PC."));
+        layout.addView(wake);
+
+        Button reverse = button("Steruj telefonem z komputera", false);
+        reverse.setOnClickListener(v -> dialog("Sterowanie Androidem z Windows",
+            "Na telefonie otwórz RustDesk → Udostępnij ekran, uruchom usługę i przyznaj uprawnienia do przechwytywania ekranu i sterowania. Na Windows połącz się z ID telefonu. System Android może wymagać ponownego zatwierdzania przechwytywania."));
+        layout.addView(reverse);
+
+        space(layout, 18);
+        TextView foot = text("Wymagany oficjalny RustDesk na telefonie. ID nie jest hasłem — pierwsze połączenie wymaga autoryzacji. Program nie wyłącza mechanizmów bezpieczeństwa.", 12, false);
+        layout.addView(foot);
     }
 
-    private TextView line(String content, int size) {
+    private void connect() {
+        String id = idInput.getText().toString().trim();
+        if (!id.matches("[A-Za-z0-9._@-]{5,80}")) {
+            idInput.setError("Wpisz poprawne ID RustDesk (5–80 znaków)");
+            return;
+        }
+        prefs.edit().putString("id", id).apply();
+        // RustDesk's documented Android 1.5.0 URI route (flutter/lib/common.dart).
+        Uri uri = Uri.parse("rustdesk://connection/new/").buildUpon().appendPath(id).build();
+        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+        intent.addCategory(Intent.CATEGORY_DEFAULT);
+        intent.setPackage("com.carriez.flutter_hbb");
+        try {
+            startActivity(intent);
+            hint.setText("Zapisano ID: " + id + ". Połączenie jest obsługiwane przez RustDesk.");
+        } catch (ActivityNotFoundException ex) {
+            new AlertDialog.Builder(this)
+                .setTitle("Brakuje RustDesk")
+                .setMessage("Do obsługi pulpitu zainstaluj oficjalny RustDesk na telefonie. Następnie wróć tutaj i naciśnij Połącz.")
+                .setPositiveButton("Strona RustDesk", (d, i) -> {
+                    Intent browser = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/rustdesk/rustdesk/releases"));
+                    startActivity(browser);
+                })
+                .setNegativeButton("Anuluj", null).show();
+        } catch (Exception ex) {
+            dialog("Nie udało się uruchomić RustDesk", ex.getMessage() == null ? "Sprawdź instalację RustDesk." : ex.getMessage());
+        }
+    }
+
+    private TextView text(String value, int pt, boolean bold) {
         TextView t = new TextView(this);
-        t.setText(content);
-        t.setTextSize(size);
-        t.setTextColor(Color.rgb(35, 51, 70));
-        t.setPadding(0, 10, 0, 12);
+        t.setText(value);
+        t.setTextSize(pt);
+        t.setTextColor(Color.rgb(55, 71, 95));
+        if (bold) t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        t.setPadding(0, dp(7), 0, dp(8));
         return t;
     }
-    private void action(LinearLayout root, String caption, boolean warning, Runnable onTap) {
+    private Button button(String value, boolean primary) {
         Button b = new Button(this);
-        b.setText(caption);
+        b.setText(value);
+        b.setTextSize(primary ? 16 : 13);
         b.setAllCaps(false);
-        b.setTextSize(13);
-        b.setTextColor(Color.WHITE);
-        b.setBackgroundTintList(ColorStateList.valueOf(warning ? Color.rgb(153, 40, 57) : Color.rgb(35, 100, 183)));
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        p.setMargins(0, 8, 0, 5);
+        b.setTextColor(primary ? Color.WHITE : Color.rgb(24, 51, 87));
+        b.setBackgroundTintList(ColorStateList.valueOf(primary ? Color.rgb(24, 104, 204) : Color.rgb(220, 232, 249)));
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(primary ? 56 : 52));
+        p.setMargins(0, dp(7), 0, dp(5));
         b.setLayoutParams(p);
-        b.setOnClickListener(v -> onTap.run());
-        root.addView(b);
+        return b;
     }
-    private void info(String title, String msg) {
-        new AlertDialog.Builder(this).setTitle(title).setMessage(msg).setPositiveButton("OK", null).show();
+    private void space(LinearLayout root, int height) {
+        View v = new View(this);
+        root.addView(v, new LinearLayout.LayoutParams(1, dp(height)));
     }
-    private void toast(String text) { Toast.makeText(this, text, Toast.LENGTH_LONG).show(); }
-    private boolean validate() {
-        String host = hostInput.getText().toString().trim();
-        String key = keyInput.getText().toString().trim();
-        String[] octets = host.split("\\.");
-        if (octets.length != 4) { toast("Podaj poprawny adres Tailscale"); return false; }
-        int[] nums = new int[4];
-        try {
-            for (int i = 0; i < 4; i++) {
-                nums[i] = Integer.parseInt(octets[i]);
-                if (nums[i] < 0 || nums[i] > 255) throw new Exception("octet");
-            }
-        } catch (Exception e) { toast("Błędny adres IP"); return false; }
-        if (!(nums[0] == 100 && nums[1] >= 64 && nums[1] <= 127)) {
-            toast("Dozwolone tylko adresy sieci Tailscale 100.64–127.x.x"); return false;
-        }
-        if (!key.matches("[a-fA-F0-9]{64}")) { toast("Kod parowania musi mieć 64 znaki szesnastkowe"); return false; }
-        return true;
+    private void dialog(String title, String body) {
+        new AlertDialog.Builder(this).setTitle(title).setMessage(body).setPositiveButton("OK", null).show();
     }
-    private void openRustDesk() {
-        Intent intent = getPackageManager().getLaunchIntentForPackage("com.carriez.flutter_hbb");
-        if (intent != null) startActivity(intent);
-        else toast("Zainstaluj oficjalny RustDesk na Androidzie.");
-    }
-    private void confirm(String question, String command) {
-        new AlertDialog.Builder(this).setTitle("Potwierdzenie")
-            .setMessage(question)
-            .setPositiveButton("Tak", (d, n) -> request("/api/power/" + command, "POST", false))
-            .setNegativeButton("Anuluj", null).show();
-    }
-    private void request(String path, String method, boolean screenshot) {
-        if (!validate()) return;
-        final String host = hostInput.getText().toString().trim();
-        final String token = keyInput.getText().toString().trim();
-        result.setText("Łączenie z komputerem…");
-        executor.execute(() -> {
-            HttpURLConnection c = null;
-            try {
-                URL url = new URL("http://" + host + ":39877" + path);
-                c = (HttpURLConnection) url.openConnection();
-                c.setConnectTimeout(8000);
-                c.setReadTimeout(25000);
-                c.setRequestMethod(method);
-                c.setUseCaches(false);
-                c.setRequestProperty("Authorization", "Bearer " + token);
-                if ("POST".equals(method)) {
-                    c.setDoOutput(true);
-                    c.getOutputStream().close();
-                }
-                int code = c.getResponseCode();
-                if (code != 200) throw new Exception("HTTP " + code + " — sprawdź parowanie/Tailscale");
-                try (InputStream stream = c.getInputStream()) {
-                    if (screenshot) {
-                        ByteArrayOutputStream memory = new ByteArrayOutputStream();
-                        byte[] buffer = new byte[32768];
-                        int count;
-                        while ((count = stream.read(buffer)) != -1) {
-                            memory.write(buffer, 0, count);
-                            if (memory.size() > 75_000_000) throw new Exception("Zbyt duży screenshot");
-                        }
-                        byte[] image = memory.toByteArray();
-                        if (image.length < 8 || image[0] != (byte)137 || image[1] != 80 || image[2] != 78 || image[3] != 71)
-                            throw new Exception("Odpowiedź nie jest obrazem PNG");
-                        savePng(image);
-                        report("Screenshot zapisany w Galerii → ZdalnyPulpit11.");
-                    } else report("Połączenie działa. Polecenie zostało wysłane.");
-                }
-            } catch (Exception e) { report("Błąd: " + e.getMessage()); }
-            finally { if (c != null) c.disconnect(); }
-        });
-    }
-    private void savePng(byte[] data) throws Exception {
-        String time = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date());
-        ContentValues meta = new ContentValues();
-        meta.put(MediaStore.Images.Media.DISPLAY_NAME, "Pulpit_Windows_" + time + ".png");
-        meta.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
-        meta.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/ZdalnyPulpit11");
-        meta.put(MediaStore.Images.Media.IS_PENDING, 1);
-        Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, meta);
-        if (uri == null) throw new Exception("Nie mogę otworzyć Galerii.");
-        try (OutputStream out = getContentResolver().openOutputStream(uri)) {
-            if (out == null) throw new Exception("Nie można utworzyć pliku");
-            out.write(data);
-        } catch (Exception ex) { getContentResolver().delete(uri, null, null); throw ex; }
-        ContentValues done = new ContentValues();
-        done.put(MediaStore.Images.Media.IS_PENDING, 0);
-        getContentResolver().update(uri, done, null, null);
-    }
-    private void report(String msg) { runOnUiThread(() -> { result.setText(msg); toast(msg); }); }
-    @Override protected void onDestroy() { executor.shutdownNow(); super.onDestroy(); }
 }
