@@ -1,0 +1,53 @@
+name: Build ASUS Control PL Android APK
+on:
+  push:
+    branches:
+      - build/asus-control-pl-20261104
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check source integrity
+        shell: bash
+        run: |
+          echo 'd7cfd38c38502d8fbd217695845060adab735be9ee2605a0c0224f9e346a6bdd  asus_control_pl_source.tar.xz' | sha256sum -c -
+          tar -xJf asus_control_pl_source.tar.xz
+      - name: Install JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install SDK 35
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build debug APK
+        run: gradle --no-daemon --stacktrace assembleDebug
+      - name: Verify APK and checksum
+        shell: bash
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          unzip -t app/build/outputs/apk/debug/app-debug.apk >/dev/null
+          sha256sum app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/debug/app-debug.apk | head -15
+          cp app/build/outputs/apk/debug/app-debug.apk ASUS_Control_PL_instalator.apk
+      - name: Publish APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ASUS_Control_PL_Android_APK
+          path: ASUS_Control_PL_instalator.apk
+          retention-days: 14
+          if-no-files-found: error
