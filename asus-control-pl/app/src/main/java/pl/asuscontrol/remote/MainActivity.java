@@ -204,6 +204,7 @@ public class MainActivity extends Activity {
         approvedHost=uri.getHost().toLowerCase(Locale.ROOT);
         active=true;usedAuth=false;usedForm=false;
         root.removeAllViews();
+        if (root.getParent() instanceof android.view.ViewGroup) ((android.view.ViewGroup)root.getParent()).removeView(root);
         root.setPadding(dp(10),dp(10),dp(10),dp(10));
         root.addView(label((remoteMode?"ZDALNIE HTTPS: ":"LOKALNIE: ")+approvedHost,15,RED));
         root.addView(btn("WYLOGUJ I ZAMKNIJ",()->{closePanel();showLogin();}));
