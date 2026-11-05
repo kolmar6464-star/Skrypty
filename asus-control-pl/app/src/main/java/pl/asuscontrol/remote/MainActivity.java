@@ -24,6 +24,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -44,6 +45,8 @@ public class MainActivity extends Activity {
     private LinearLayout root, advanced;
     private TextView state, detectedLabel;
     private EditText login, password, localIpInput, remoteUrlInput;
+    private CheckBox savePasswordCheck;
+    private CredentialVault credentialVault;
     private String discoveredGateway;
     private WebView browser;
     private String approvedHost;
@@ -57,6 +60,7 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
         preferences = getSharedPreferences("router", MODE_PRIVATE);
+        credentialVault = new CredentialVault(this);
         showLogin();
     }
     private int dp(int n){return (int)(getResources().getDisplayMetrics().density*n+.5f);}
@@ -116,8 +120,8 @@ public class MainActivity extends Activity {
         remoteUrlInput=field("https://nazwa.asuscomm.com:8443",preferences.getString("remote",""),
                 InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
         advanced.addView(remoteUrlInput);
-        advanced.addView(btn("ZAPISZ ADRESY (BEZ HASŁA)",()->saveAddresses()));
-        advanced.addView(label("Nie włączam publicznego panelu WAN, nie konfiguruję DDNS na routerze i nie omijam CGNAT. Bez tego dostęp z 4G/5G może nie działać. Hasło nie jest zapisywane.",13,MUTED));
+        advanced.addView(btn("ZAPISZ ADRESY",()->saveAddresses()));
+        advanced.addView(label("Nie włączam publicznego panelu WAN, nie konfiguruję DDNS na routerze i nie omijam CGNAT. Bez tego dostęp z 4G/5G może nie działać. Zapis hasła jest opcjonalny i szyfrowany.",13,MUTED));
         setContentView(scroll);
     }
     private String wifiGateway(){
@@ -167,7 +171,7 @@ public class MainActivity extends Activity {
         if(!url.isEmpty()&&checkedRemote(url)==null){
             state.setText("Zdalny adres musi być HTTPS, np. https://mojrouter.asuscomm.com:8443");return;}
         preferences.edit().putString("local",ip).putString("remote",url).apply();
-        state.setText("Zapisano adresy. Nie zapisano hasła administratora.");
+        state.setText("Zapisano adresy routera. Opcja zapamiętania hasła jest osobnym checkboxem.");
         advanced.setVisibility(View.GONE);
     }
     private void connect(){
