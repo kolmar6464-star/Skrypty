@@ -206,8 +206,40 @@ public class MainActivity extends Activity {
         advanced.setVisibility(View.GONE);
     }
     private void connect(){
-        user=login.getText().toString().trim();secret=password.getText().toString();
-        if(user.isEmpty()||secret.isEmpty()){state.setText("Wpisz login i hasło ASUS.");return;}
+        user=login.getText().toString().trim();
+        String freshlyTypedPassword=password.getText().toString();
+        secret=freshlyTypedPassword;
+        if(secret.isEmpty() && savePasswordCheck.isChecked()){
+            try {
+                CredentialVault.Credentials saved = credentialVault.load();
+                if(saved != null && saved.username.equals(user)) {
+                    secret=saved.password;
+                }
+            } catch (Exception e) {
+                state.setText("Nie można odczytać zapisanego hasła. Wpisz je ponownie.");
+                return;
+            }
+        }
+        if(user.isEmpty()||secret.isEmpty()){
+            state.setText("Wpisz login i hasło ASUS lub użyj wcześniej zapisanego hasła.");
+            secret=null;
+            return;
+        }
+        if(savePasswordCheck.isChecked()){
+            if(!freshlyTypedPassword.isEmpty()){
+                try {
+                    credentialVault.save(user, secret);
+                } catch(Exception e) {
+                    state.setText("Błąd szyfrowanego zapisu hasła. Połączenie anulowano.");
+                    secret=null;
+                    return;
+                }
+                password.setText("");
+                password.setHint("Zapisane hasło - pozostaw puste");
+            }
+        } else {
+            credentialVault.delete();
+        }
         String savedIp=preferences.getString("local","192.168.2.1");
         // Automatyczne wykrywanie bramy nie oznacza, że to ASUS – wymagamy potwierdzenia.
         boolean ownWifi=discoveredGateway!=null && discoveredGateway.equals(savedIp);
@@ -220,7 +252,9 @@ public class MainActivity extends Activity {
                 state.setText(discoveredGateway==null?
                     "Nie jesteś w domowej sieci. Aby użyć 4G/5G bez VPN, router musi wcześniej udostępniać HTTPS WAN oraz DDNS. Ustaw adres w sekcji ADRES ROUTERA.":
                     "Obecna brama Wi-Fi jest inna niż zapisana. Nie wysyłam hasła na obcy router. Ustaw własny IP lub adres zdalny HTTPS.");
-                advanced.setVisibility(View.VISIBLE);return;
+                advanced.setVisibility(View.VISIBLE);
+                secret=null;
+                return;
             }
             remoteMode=true;endpoint=remote.toString();
         }
