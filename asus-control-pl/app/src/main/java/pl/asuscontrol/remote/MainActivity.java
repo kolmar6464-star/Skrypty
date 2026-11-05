@@ -274,7 +274,7 @@ public class MainActivity extends Activity {
         active=false;secret=null;user=null;
         if(browser!=null){
             try{browser.stopLoading();browser.clearHistory();browser.clearCache(true);
-                browser.clearHttpAuthUsernamePassword();browser.loadUrl("about:blank");
+                android.webkit.WebViewDatabase.getInstance(MainActivity.this).clearHttpAuthUsernamePassword();browser.loadUrl("about:blank");
                 CookieManager.getInstance().removeAllCookies(null);
                 CookieManager.getInstance().flush();browser.destroy();
             }catch(Exception ignored){}
