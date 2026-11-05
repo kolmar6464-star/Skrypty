@@ -97,15 +97,46 @@ public class MainActivity extends Activity {
             detectedLabel=label("Brak domowej bramy Wi-Fi. Możliwy tryb zdalny HTTPS.",14,MUTED);
         }
         root.addView(detectedLabel);
+        CredentialVault.Credentials stored = null;
+        boolean recoveryFailed = false;
+        try {
+            stored = credentialVault.load();
+        } catch (Exception e) {
+            recoveryFailed = true;
+            credentialVault.delete();
+        }
         root.addView(label("Login administratora ASUS",15,WHITE));
-        login=field("Login","",InputType.TYPE_CLASS_TEXT);
+        login=field("Login",stored == null ? "" : stored.username,InputType.TYPE_CLASS_TEXT);
         root.addView(login);
         root.addView(label("Hasło administratora ASUS",15,WHITE));
-        password=field("Hasło","",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        password=field(stored == null ? "Hasło" : "Zapisane hasło - pozostaw puste",
+                "",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
         root.addView(password);
+        savePasswordCheck = new CheckBox(this);
+        savePasswordCheck.setText("Zapisz trwale hasło do routera");
+        savePasswordCheck.setTextColor(WHITE);
+        savePasswordCheck.setTextSize(15);
+        savePasswordCheck.setButtonTintList(android.content.res.ColorStateList.valueOf(RED));
+        savePasswordCheck.setChecked(stored != null);
+        root.addView(savePasswordCheck);
         root.addView(btn("POŁĄCZ Z ROUTEREM",()->connect()));
-        state=label("W sieci domowej: wykrywanie automatyczne. Poza domem: wymagany wcześniej skonfigurowany adres HTTPS/DDNS oraz publiczny adres WAN.",13,MUTED);
+        state=label(recoveryFailed
+                ? "Nie można było odczytać starego hasła. Wpisz je ponownie."
+                : stored != null
+                ? "Login i hasło zapisano szyfrowane w Androidzie. Hasło może pozostać puste."
+                : "W sieci domowej: wykrywanie IP. Poza domem: potrzebny wcześniej skonfigurowany HTTPS/DDNS i publiczny WAN.",
+                13,MUTED);
         root.addView(state);
+        savePasswordCheck.setOnCheckedChangeListener((button, checked) -> {
+            if (!checked) {
+                credentialVault.delete();
+                password.setText("");
+                password.setHint("Hasło administratora ASUS");
+                state.setText("Usunięto zapisane hasło. Wpisz je przy kolejnym logowaniu.");
+            } else {
+                state.setText("Hasło zapisze się szyfrowane po naciśnięciu POŁĄCZ Z ROUTEREM.");
+            }
+        });
         root.addView(btn("ADRES ROUTERA / USTAWIENIA",()->advanced.setVisibility(advanced.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE)));
         advanced=column();advanced.setBackgroundColor(CARD);advanced.setVisibility(View.GONE);
         root.addView(advanced);
