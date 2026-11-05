@@ -1,8 +1,8 @@
-name: ASUS Control PL 0.6 APK (bez VPN)
+name: ASUS Control PL 0.7 APK (szyfrowane hasło)
 on:
   push:
     branches:
-      - asus-control-pl-bez-vpn-v06-20261105
+      - asus-control-pl-zapis-hasla-v07-20261105
   workflow_dispatch:
 permissions:
   contents: read
@@ -39,10 +39,11 @@ jobs:
         run: |
           test -s app/build/outputs/apk/debug/app-debug.apk
           sha256sum app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: ASUS_Control_PL_v0_6_BEZ_VPN_APK
+          name: ASUS_Control_PL_v0_7_ZAPIS_HASLA_APK
           path: asus-control-pl/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
