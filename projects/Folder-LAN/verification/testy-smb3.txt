@@ -1,0 +1,1 @@
+SMB3 integracja: połączenie, lista, mkdir, upload/download zgodne bajtowo, ochrona kolizji, rename/delete, odmowa błędnego hasła i publicznego adresu — OK.

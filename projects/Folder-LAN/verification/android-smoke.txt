@@ -1,0 +1,14 @@
+Folder LAN — Android runtime smoke
+Device: Android9(API28),x86,AOSP emulator,softwareTCG,emulator-5556.
+Boot confirmed: sys.boot_completed=1.
+Artifact SHA256: 7a7412b36ad25f3ce8518ab1d3c60aea1772d0b3c29f11c73095c1b93a34ea22
+PASS: adb install -r of release APK returned Success.
+PASS: am start -W -n pl.folderlan.app/.MainActivity returned Status:ok and Activity:pl.folderlan.app/.MainActivity.
+PASS: home UI hierarchy contains Polish Folder LAN title,computer actions,phone-folder action and license action.
+PASS: manual-pair dialog was observed with5input fields and explicit connect/remember action.
+PENDING: fixture SMB pairing/listing and credential persistence after process restart; UI automation has not completed these steps.
+PENDING: end-to-end phone-folder SAF/HTTP test on Android.
+Android15/API35 software-emulator attempt failed during OS first boot with system_server watchdog; this is an environment limitation,not an application crash.
+Screenshots intentionally omitted: application requests FLAG_SECURE.
+No SMB passwords,pairing tokens or generated debug/private keys included.
+Crash buffer check: no pl.folderlan.app crash marker observed.

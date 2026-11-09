@@ -1,0 +1,17 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Folder LAN, O=Folder LAN
+Signer #1 certificate SHA-256 digest: d184b84a9e3b80278a7cad5dd3ca332145bb8833b623e57564f9d1faf79f8c60
+Signer #1 certificate SHA-1 digest: 022b511a7f82b80ff54d5653bd28515c1edab73c
+Signer #1 certificate MD5 digest: 02186750b038f7e3520b9432eb4dee8b
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 3072
+Signer #1 public key SHA-256 digest: d801c9fd1a3e626c335ef392e51b827914012d0625eab65b2ab98dbfbef24306
+Signer #1 public key SHA-1 digest: c30382e2db27b780893f6ba47f756c600dc1b810
+Signer #1 public key MD5 digest: 955b4bbbc65a996fb1443eb2b767f1b0

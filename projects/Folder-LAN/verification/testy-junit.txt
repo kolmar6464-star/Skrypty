@@ -1,0 +1,5 @@
+pl.folderlan.app.DiscoveryProtocolTest: tests=9, failures=0, errors=0, skipped=0
+pl.folderlan.app.HostPolicyTest: tests=5, failures=0, errors=0, skipped=0
+pl.folderlan.app.PhoneServerSecurityTest: tests=10, failures=0, errors=0, skipped=0
+pl.folderlan.app.SharePathTest: tests=7, failures=0, errors=0, skipped=0
+pl.folderlan.app.SmbSocketRoutingTest: tests=2, failures=0, errors=0, skipped=0

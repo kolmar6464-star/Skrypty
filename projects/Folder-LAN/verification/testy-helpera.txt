@@ -1,0 +1,10 @@
+PASS prywatny IPv4
+PASS publiczny IPv4 odrzucony
+PASS ta sama podsieć
+PASS obca podsieć odrzucona
+PASS odczyt wyłącznie literału AST
+PASS kod źródłowego PS1 nie został wykonany
+PASS wyrażenia hasła odrzucone
+PASS niejednoznaczne przypisania odrzucone
+PASS błąd parsera odrzucony bez ujawnienia treści
+RESULT 9 passed; no Windows GUI/network execution
