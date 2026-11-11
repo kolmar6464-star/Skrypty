@@ -175,6 +175,8 @@ jobs:
           PY
       - name: Repair Wi-Fi discovery and immediate SMB transfer abort
         run: python3 android-gallery-v8/patch_discovery_cancel.py
+      - name: Restore connectivity after Windows reinstall or hostname change
+        run: python3 android-gallery-v9/patch_auto_reconnect.py
       - name: Build APK
         run: gradle --no-daemon :app:assembleDebug
       - name: Include local APK signing tools
