@@ -198,6 +198,8 @@ jobs:
         run: |
           cp android-gallery-v12/FindPhoneAlarmActivity.java app/src/main/java/pl/folderlan/android/FindPhoneAlarmActivity.java
           python3 android-gallery-v12/patch_alarm_screen.py
+      - name: Restore v9 gallery workflow and photo editing
+        run: python3 android-gallery-v13/restore_photo_edit.py
       - name: Build APK
         run: gradle --no-daemon :app:assembleDebug
       - name: Include local APK signing tools
@@ -206,7 +208,7 @@ jobs:
           cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" ./zipalign
       - uses: actions/upload-artifact@v4
         with:
-          name: Folder-Udostepniony-Auto-Android-v12
+          name: Folder-Udostepniony-Auto-Android-v13
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             apksigner.jar
