@@ -1,4 +1,4 @@
-name: Build FolderLAN v9.1 Galeria Ptaszki
+name: Build FolderLAN v15 Galeria Wszystkie Zdjecia
 on:
   push:
     branches: [android-folderlan-apk]
@@ -194,6 +194,8 @@ jobs:
           g.write_text(gradle.replace("versionCode 9","versionCode 10")
                              .replace("versionName '9.0'","versionName '9.1'"), encoding="utf-8")
           PY
+      - name: Full in-app gallery and safe cut or copy all
+        run: python3 android-gallery-v15/patch_all_gallery_cut.py
       - name: Build APK
         run: gradle --no-daemon :app:assembleDebug
       - name: Include local APK signing tools
@@ -202,7 +204,7 @@ jobs:
           cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" ./zipalign
       - uses: actions/upload-artifact@v4
         with:
-          name: FolderLAN-v9.1-Galeria-Ptaszki
+          name: FolderLAN-v15-Galeria-Ptaszki-Kopiuj-Wytnij
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             apksigner.jar
