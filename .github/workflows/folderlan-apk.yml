@@ -173,6 +173,8 @@ jobs:
           s=s.replace('versionCode 6', 'versionCode 7').replace("versionName '6.0'", "versionName '7.0'")
           p.write_text(s)
           PY
+      - name: Repair Wi-Fi discovery and immediate SMB transfer abort
+        run: python3 android-gallery-v8/patch_discovery_cancel.py
       - name: Build APK
         run: gradle --no-daemon :app:assembleDebug
       - name: Include local APK signing tools
