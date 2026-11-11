@@ -183,7 +183,7 @@ public final class FindPhoneService extends Service {
                         String raw = new String(received.getData(),received.getOffset(),
                                 received.getLength(),StandardCharsets.US_ASCII);
                         String[] fields = raw.split("\\|",-1);
-                        if (fields.length != 5 || !"FLF1".equals(fields[0])
+                        if (fields.length != 5 || (!"FLF1".equals(fields[0]) && !"FLFP".equals(fields[0]))
                                 || !KIT.equals(fields[1]) || !fields[2].matches("[0-9]{10,11}")
                                 || !fields[3].matches("[0-9a-f]{32}")) continue;
                         long issued = Long.parseLong(fields[2]);
@@ -193,6 +193,13 @@ public final class FindPhoneService extends Service {
                         String expected = mac(signed);
                         if (!MessageDigest.isEqual(expected.getBytes(StandardCharsets.US_ASCII),
                                 fields[4].getBytes(StandardCharsets.US_ASCII))) continue;
+                        if ("FLFP".equals(fields[0])) {
+                            String pong = "FLFPA|"+KIT+"|"+fields[3];
+                            byte[] response=(pong+"|"+mac(pong)).getBytes(StandardCharsets.US_ASCII);
+                            udp.send(new DatagramPacket(response,response.length,
+                                    received.getAddress(),received.getPort()));
+                            continue;
+                        }
                         if (SystemClock.elapsedRealtime()-lastTrigger<3000L) continue;
                         lastNonce=fields[3];
                         lastTrigger=SystemClock.elapsedRealtime();
