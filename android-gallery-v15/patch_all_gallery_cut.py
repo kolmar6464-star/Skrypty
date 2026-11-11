@@ -172,7 +172,7 @@ m.write_text(a, encoding="utf-8")
 
 b = Path("app/build.gradle")
 cfg = b.read_text(encoding="utf-8")
-assert "versionCode 10" in cfg and "versionName '9.1'" in cfg, "Expected based on v9.1"
-cfg = cfg.replace("versionCode 10","versionCode 15").replace("versionName '9.1'","versionName '15.0'")
+assert ("versionCode 10" in cfg and "versionName '9.1'" in cfg) or ("versionCode 12" in cfg and "versionName '12.0'" in cfg), "Expected v9.1 or v12 baseline"
+cfg = cfg.replace("versionCode 10","versionCode 15").replace("versionName '9.1'","versionName '15.0'").replace("versionCode 12","versionCode 15").replace("versionName '12.0'","versionName '15.0'")
 b.write_text(cfg,encoding="utf-8")
 print("v15: original in-app media grid, full images permission, all-copy, checked cut, optional delete; no deselection after copy")
