@@ -65,7 +65,7 @@ s = s[:start] + """
                     int ip = asInt(address.getAddress().getAddress());
                     int prefix = address.getNetworkPrefixLength();
                     if (prefix < 8 || prefix > 30) continue;
-                    int bits = Math.min(24, prefix);
+                    int bits = Math.max(24, prefix);
                     int mask = -1 << (32 - bits);
                     int network = ip & mask;
                     // Never scan outside the directly connected /24 (or smaller) Wi-Fi subnet.
@@ -328,7 +328,10 @@ sub2("""            } catch (Exception e) {
                 }
             } finally {
                 if (uploader!=null) {
+                    final String incomplete=uploader.incompleteUploadPath();
                     uploader.close();
+                    if (remote!=null && incomplete!=null)
+                        remote.cleanupIncompleteUpload(incomplete);
                 }
                 activeUploadSession=null;
                 final int errs=failures;""")
