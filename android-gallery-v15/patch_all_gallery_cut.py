@@ -15,50 +15,35 @@ edit("    private Button selectAll, clear, copy, cancel, delete;",
      "    private Button selectAll, clear, copy, cancel, delete, copyAll, move;")
 
 # Add buttons to existing panel; do not replace it with an external picker.
-edit("        body.addView(delete, new LinearLayout.LayoutParams(-1, dp(54)));\n",
-"""        body.addView(delete, new LinearLayout.LayoutParams(-1, dp(54)));
-
-        copyAll = button("Kopiuj WSZYSTKO do folderu udostępnionego", v -> {
-            if (copying || photos.isEmpty()) return;
-            // Does not mutate the user's checkmarks; only sends all visible items.
-            ArrayList<Item> everything = new ArrayList<>(photos);
-            setCopying(true);
-            handler.onCopy(everything);
+edit("        heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));\\n",
+"""        heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+        Button extraActions = button("Opcje", v -> {
+            String[] opts = {
+                "Kopiuj WSZYSTKO do folderu (" + photos.size() + ")",
+                "Wytnij zaznaczone i wklej (" + selected.size() + ")"
+            };
+            new android.app.AlertDialog.Builder(activity)
+                .setTitle("Operacje na zdjęciach i filmach")
+                .setItems(opts, (dlg, which) -> {
+                    if (copying) return;
+                    if (which == 0) {
+                        if (photos.isEmpty()) return;
+                        // Copy all visible files without modifying existing checks.
+                        setCopying(true);
+                        handler.onCopy(new ArrayList<>(photos));
+                    } else {
+                        if (selected.isEmpty()) return;
+                        ArrayList<Item> chosen = new ArrayList<>();
+                        for (Item item : photos) if (selected.contains(item.uri)) chosen.add(item);
+                        handler.onMove(chosen);
+                    }
+                })
+                .setNegativeButton("Zamknij", null)
+                .show();
         });
-        copyAll.setTextColor(Color.WHITE);
-        copyAll.setBackgroundTintList(android.content.res.ColorStateList.valueOf(BLUE));
-        body.addView(copyAll, new LinearLayout.LayoutParams(-1, dp(54)));
-
-        move = button("Wytnij zaznaczone → Wklej do folderu udostępnionego", v -> {
-            if (copying || selected.isEmpty()) return;
-            ArrayList<Item> chosen = new ArrayList<>();
-            for (Item item : photos) if (selected.contains(item.uri)) chosen.add(item);
-            // MainActivity prompts before uploading and separately before deletion.
-            handler.onMove(chosen);
-        });
-        move.setTextColor(Color.WHITE);
-        move.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(142, 79, 199)));
-        body.addView(move, new LinearLayout.LayoutParams(-1, dp(60)));
+        heading.addView(extraActions, new LinearLayout.LayoutParams(dp(78), dp(52)));
 """)
 
-edit("""        if (delete != null) {
-            delete.setEnabled(!copying && !selected.isEmpty());
-            delete.setText("Usuń zaznaczone z telefonu (" + selected.size() + ")");
-        }
-""",
-"""        if (delete != null) {
-            delete.setEnabled(!copying && !selected.isEmpty());
-            delete.setText("Usuń zaznaczone z telefonu (" + selected.size() + ")");
-        }
-        if (copyAll != null) {
-            copyAll.setEnabled(!copying && !photos.isEmpty());
-            copyAll.setText("Kopiuj WSZYSTKO do folderu (" + photos.size() + ")");
-        }
-        if (move != null) {
-            move.setEnabled(!copying && !selected.isEmpty());
-            move.setText("Wytnij zaznaczone i wklej (" + selected.size() + ")");
-        }
-""")
 # Guarantee that the checkbox remains selected after transferFinished.
 assert "selected.removeAll(successes);" not in s, "Regression: copy should not uncheck selected items."
 assert "loadGallery();" in s and "MediaStore.Images.Media.EXTERNAL_CONTENT_URI" in s
