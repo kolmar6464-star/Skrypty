@@ -192,6 +192,8 @@ jobs:
           assert "versionCode 9" in config and "versionName '9.0'" in config
           gradle.write_text(config.replace('versionCode 9','versionCode 10').replace("versionName '9.0'","versionName '10.0'"),encoding='utf-8')
           PY
+      - name: Temporarily maximize phone alarm volume while locating
+        run: python3 android-gallery-v11/patch_max_alert.py
       - name: Build APK
         run: gradle --no-daemon :app:assembleDebug
       - name: Include local APK signing tools
