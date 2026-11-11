@@ -2,6 +2,9 @@ package pl.folderlan.android;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -19,6 +22,13 @@ import android.widget.TextView;
  * notification. No overlay/system-alert-window permission is requested.
  */
 public final class FindPhoneAlarmActivity extends Activity {
+    private boolean receiverRegistered;
+    private final BroadcastReceiver finished = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            if (FindPhoneService.ALARM_FINISHED.equals(intent.getAction())) finish();
+        }
+    };
+
     public static final String ACTION_SHOW_ALARM = "pl.folderlan.android.SHOW_FIND_ALARM";
 
     private GradientDrawable rounded(int color, float dpRadius) {
@@ -95,6 +105,23 @@ public final class FindPhoneAlarmActivity extends Activity {
 
     private int dp(int px) {
         return Math.round(px * getResources().getDisplayMetrics().density);
+    }
+
+    @Override protected void onStart() {
+        super.onStart();
+        IntentFilter filter = new IntentFilter(FindPhoneService.ALARM_FINISHED);
+        if (Build.VERSION.SDK_INT >= 33)
+            registerReceiver(finished, filter, Context.RECEIVER_NOT_EXPORTED);
+        else registerReceiver(finished, filter);
+        receiverRegistered = true;
+    }
+
+    @Override protected void onStop() {
+        if (receiverRegistered) {
+            try { unregisterReceiver(finished); } catch (Exception ignored) {}
+            receiverRegistered = false;
+        }
+        super.onStop();
     }
 
     private void stopAlarm() {
