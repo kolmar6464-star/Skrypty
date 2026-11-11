@@ -8,7 +8,7 @@ def replace(old,new):
 replace('import java.io.InputStream;\n', 'import java.io.InputStream;\nimport java.io.InterruptedIOException;\nimport java.io.ByteArrayOutputStream;\n')
 replace('import java.util.ArrayList;\n','import java.util.ArrayList;\nimport java.util.UUID;\nimport java.util.concurrent.atomic.AtomicBoolean;\nimport java.time.LocalDate;\nimport java.time.format.DateTimeFormatter;\n')
 replace('            if (".".equals(name) || "..".equals(name)) continue;',
-'''            int attributes = fi.getFileAttributes();
+'''            long attributes = fi.getFileAttributes();
             if (".".equals(name) || "..".equals(name) || name.startsWith(".")) continue;
             if ((attributes & FileAttributes.FILE_ATTRIBUTE_HIDDEN.getValue()) != 0
                     || (attributes & FileAttributes.FILE_ATTRIBUTE_SYSTEM.getValue()) != 0) continue;''')
