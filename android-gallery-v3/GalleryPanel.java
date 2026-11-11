@@ -319,16 +319,15 @@ final class GalleryPanel {
         progress.setProgress(done);
         progressLabel.setText("Kopiowanie " + done + " / " + total + ": " + current);
     }
-    void transferFinished(int successes, int failures, String firstError) {
+    void transferFinished(List<Uri> successes, int failures, String firstError) {
         if (closed) return;
         setCopying(false);
-        progressLabel.setText("Skopiowano: " + successes + ", błędy: " + failures
-            + (firstError == null || firstError.isEmpty() ? "" : ". " + firstError));
-        if (failures == 0 && successes > 0) {
-            selected.clear();
-            adapter.notifyDataSetChanged();
-            update();
-        }
+        selected.removeAll(successes);
+        adapter.notifyDataSetChanged();
+        update();
+        progressLabel.setText("Skopiowano: " + successes.size() + ", błędy: " + failures
+            + (firstError == null || firstError.isEmpty() ? "" : ". " + firstError)
+            + (failures > 0 ? " — ponów Kopiuj dla pozostałych plików." : ""));
     }
     void transferError(String explanation) {
         if (closed) return;
