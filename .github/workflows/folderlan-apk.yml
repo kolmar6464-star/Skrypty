@@ -177,6 +177,21 @@ jobs:
         run: python3 android-gallery-v8/patch_discovery_cancel.py
       - name: Restore connectivity after Windows reinstall or hostname change
         run: python3 android-gallery-v9/patch_auto_reconnect.py
+      - name: Preserve photo selection after copying
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/java/pl/folderlan/android/GalleryPanel.java')
+          code=p.read_text(encoding='utf-8')
+          old='        selected.removeAll(successes);'
+          assert code.count(old)==1, 'gallery selection state changed unexpectedly'
+          code=code.replace(old, '        // Keep check marks after successful copying, so the same photos can be deleted manually.',1)
+          p.write_text(code,encoding='utf-8')
+          gradle=Path('app/build.gradle')
+          config=gradle.read_text(encoding='utf-8')
+          assert "versionCode 9" in config and "versionName '9.0'" in config
+          gradle.write_text(config.replace('versionCode 9','versionCode 10').replace("versionName '9.0'","versionName '10.0'"),encoding='utf-8')
+          PY
       - name: Build APK
         run: gradle --no-daemon :app:assembleDebug
       - name: Include local APK signing tools
