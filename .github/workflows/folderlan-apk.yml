@@ -160,6 +160,10 @@ jobs:
           s=b.read_text().replace('versionCode 3','versionCode 5').replace("versionName '3.0'","versionName '5.0'")
           b.write_text(s)
           PY
+      - name: Add Find Phone foreground listener and permissions
+        run: |
+          cp android-gallery-v6/FindPhoneService.java app/src/main/java/pl/folderlan/android/FindPhoneService.java
+          python3 android-gallery-v6/patch_finder.py
       - name: Build APK
         run: gradle --no-daemon :app:assembleDebug
       - name: Include local APK signing tools
