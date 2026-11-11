@@ -15,7 +15,7 @@ edit("    private Button selectAll, clear, copy, cancel, delete;",
      "    private Button selectAll, clear, copy, cancel, delete, copyAll, move;")
 
 # Add buttons to existing panel; do not replace it with an external picker.
-edit("        heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));\\n",
+edit("        heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));\n",
 """        heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
         Button extraActions = button("Opcje", v -> {
             String[] opts = {
