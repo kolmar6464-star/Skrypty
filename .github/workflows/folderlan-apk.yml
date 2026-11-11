@@ -164,6 +164,15 @@ jobs:
         run: |
           cp android-gallery-v6/FindPhoneService.java app/src/main/java/pl/folderlan/android/FindPhoneService.java
           python3 android-gallery-v6/patch_finder.py
+      - name: Set phone presence app version 7
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/build.gradle')
+          s=p.read_text()
+          s=s.replace('versionCode 6', 'versionCode 7').replace("versionName '6.0'", "versionName '7.0'")
+          p.write_text(s)
+          PY
       - name: Build APK
         run: gradle --no-daemon :app:assembleDebug
       - name: Include local APK signing tools
