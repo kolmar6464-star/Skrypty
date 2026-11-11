@@ -145,6 +145,21 @@ jobs:
         run: |
           cp android-gallery-v3/GalleryPanel.java app/src/main/java/pl/folderlan/android/GalleryPanel.java
           python3 android-gallery-v3/patch_main.py
+      - name: Add cancellation, hidden-file filtering, daily upload folders, and media library
+        run: |
+          python3 android-gallery-v4/patch_share.py
+          python3 android-gallery-v4/patch_gallery.py
+          cp android-gallery-v5/MainActivity.java app/src/main/java/pl/folderlan/android/MainActivity.java
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/AndroidManifest.xml')
+          s=p.read_text()
+          s=s.replace('<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />', '<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />')
+          p.write_text(s)
+          b=Path('app/build.gradle')
+          s=b.read_text().replace('versionCode 3','versionCode 5').replace("versionName '3.0'","versionName '5.0'")
+          b.write_text(s)
+          PY
       - name: Build APK
         run: gradle --no-daemon :app:assembleDebug
       - name: Include local APK signing tools
