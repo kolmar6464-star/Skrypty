@@ -47,23 +47,23 @@ g=alter(g,'''        if (state) {
         update();
     }
 ''',"progress start reset")
-g=alter(g,'''        setCopying(false);
-        adapter.notifyDataSetChanged();
-        update();
-        progressLabel.setText((cancelled ? "Przerwano. " : "") + "Skopiowano: " + successes.size() + ", błędy: " + failures
-''',
+# Do not touch the existing comment that deliberately retains checkmarks.
+finish_start=g.index("    void transferFinished(")
+finish_end=g.index("    void transferError(",finish_start)
+segment=g[finish_start:finish_end]
+assert segment.count("        setCopying(false);")==1
+segment=segment.replace("        setCopying(false);",
 '''        setCopying(false);
         if (!cancelled) {
-            // Every file in the requested batch has now been attempted;
-            // fill the bar regardless of whether individual files failed.
+            // Every selected file has been processed, including failed attempts.
             progress.setProgress(progress.getMax());
-        }
-        adapter.notifyDataSetChanged();
-        update();
-        progressLabel.setText((cancelled ? "Przerwano kopiowanie. " :
+        }''',1)
+assert segment.count('progressLabel.setText((cancelled ? "Przerwano. " : "") + "Skopiowano: "')==1
+segment=segment.replace('progressLabel.setText((cancelled ? "Przerwano. " : "") + "Skopiowano: "',
+'''progressLabel.setText((cancelled ? "Przerwano kopiowanie. " :
             (failures > 0 ? "Zakończono kopiowanie z błędami. " : "Kopiowanie zakończone. "))
-            + "Skopiowano: " + successes.size() + ", błędy: " + failures
-''',"progress final")
+            + "Skopiowano: "''',1)
+g=g[:finish_start]+segment+g[finish_end:]
 assert "selected.removeAll(successes);" not in g, "Do not change photo checkmark persistence"
 assert "MediaStore.Images.Media.EXTERNAL_CONTENT_URI" in g, "Keep internal gallery"
 panel.write_text(g,encoding="utf-8")
