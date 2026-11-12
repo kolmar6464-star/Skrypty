@@ -1,0 +1,14 @@
+name: FolderLAN iPhone macOS Toolchain Check
+on:
+  push:
+    branches: [android-folderlan-apk]
+  workflow_dispatch:
+jobs:
+  xcode-check:
+    runs-on: macos-15
+    steps:
+      - name: Verify Xcode and iOS SDK
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          swift --version
