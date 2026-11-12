@@ -85,7 +85,7 @@ final class RemoteFilePreview {
             .setMessage("Odczyt pliku z folderu udostępnionego…")
             .setNegativeButton("Anuluj", (d,w) -> canceled.set(true))
             .create();
-        loading.setOnDismissListener(d -> canceled.set(true));
+        loading.setOnCancelListener(d -> canceled.set(true));
         loading.show();
         Thread thread = new Thread(() -> {
             File temp = null;
