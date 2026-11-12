@@ -1,4 +1,4 @@
-name: Build FolderLAN v15 APK Windows Runner
+name: Build FolderLAN v16 Awake Finder Gallery
 on:
   push:
     branches: [android-folderlan-apk]
@@ -180,6 +180,10 @@ jobs:
           python3 android-gallery-v12/patch_alarm_screen.py
       - name: Show full built-in gallery, copy all, move safely, keep checkmarks
         run: python3 android-gallery-v15/patch_all_gallery_cut.py
+      - name: Keep Find Phone awake, restore visible gallery actions
+        run: |
+          cp android-gallery-v16/FindPhoneBootReceiver.java app/src/main/java/pl/folderlan/android/FindPhoneBootReceiver.java
+          python3 android-gallery-v16/patch_finder_gallery.py
       - name: Build Android APK (Windows)
         shell: pwsh
         run: |
@@ -194,7 +198,7 @@ jobs:
           Copy-Item (Join-Path $sdk "build-tools/35.0.0/zipalign.exe") ./zipalign.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: FolderLAN-v15-APK-Windows-Build
+          name: FolderLAN-v16-APK-Windows-Build
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             apksigner.jar
