@@ -1,4 +1,4 @@
-name: Build FolderLAN v12.1 Android Linux
+name: Build FolderLAN v12.2 Final Gallery and Alarm
 on:
   push:
     branches: [android-folderlan-apk]
@@ -203,6 +203,8 @@ jobs:
           cp android-gallery-v12_1/RemoteFilePreview.java app/src/main/java/pl/folderlan/android/RemoteFilePreview.java
           cp android-gallery-v12_1/FindPhoneBootReceiver.java app/src/main/java/pl/folderlan/android/FindPhoneBootReceiver.java
           python3 android-gallery-v12_1/patch_v12_auto_listener_preview.py
+      - name: v12.2: in-app gallery and full-screen Find Phone alarm
+        run: python3 android-gallery-v12_2/patch_gallery_and_lock_screen.py
       - name: Build APK
         run: gradle --no-daemon :app:assembleDebug
       - name: Include local APK signing tools
@@ -211,7 +213,7 @@ jobs:
           cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" ./zipalign
       - uses: actions/upload-artifact@v4
         with:
-          name: FolderLAN-v12_1-APK-Linux-Build
+          name: FolderLAN-v12_2-APK-Verified-Build
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             apksigner.jar
