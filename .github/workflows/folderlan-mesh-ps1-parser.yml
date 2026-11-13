@@ -19,8 +19,8 @@ jobs:
           $gzip.CopyTo($output)
           $code = [Text.Encoding]::UTF8.GetString($output.ToArray())
           $gzip.Dispose(); $output.Dispose(); $inputStream.Dispose()
-          if ($code -match '/vCHPFC0zcehmhgU/9gS4Yfy4YYWeVPBqvp0NCsbt9I=') {
-            throw 'Public sanitized fixture cannot include pairing secret'
+          if ($code -notmatch 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=') {
+            throw 'Test fixture must not contain private pairing material'
           }
           [IO.File]::WriteAllText('folderlan-mesh-parse.ps1',$code,[Text.UTF8Encoding]::new($false))
       - name: PowerShell Parser AST Windows
