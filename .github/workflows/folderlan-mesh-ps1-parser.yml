@@ -1,0 +1,38 @@
+name: Test FolderLAN Mesh PS1 Syntax (sanitized)
+on:
+  push:
+    branches: [android-folderlan-apk]
+  workflow_dispatch:
+jobs:
+  parse:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode sanitized PS1 fixture
+        shell: pwsh
+        run: |
+          $source = [IO.File]::ReadAllText('tests/folderlan_mesh_safe_parser_source.b64') -replace '\s',''
+          $bytes = [Convert]::FromBase64String($source)
+          $inputStream = [IO.MemoryStream]::new($bytes)
+          $gzip = [IO.Compression.GZipStream]::new($inputStream,[IO.Compression.CompressionMode]::Decompress)
+          $output = [IO.MemoryStream]::new()
+          $gzip.CopyTo($output)
+          $code = [Text.Encoding]::UTF8.GetString($output.ToArray())
+          $gzip.Dispose(); $output.Dispose(); $inputStream.Dispose()
+          if ($code -match '/vCHPFC0zcehmhgU/9gS4Yfy4YYWeVPBqvp0NCsbt9I=') {
+            throw 'Public sanitized fixture cannot include pairing secret'
+          }
+          [IO.File]::WriteAllText('folderlan-mesh-parse.ps1',$code,[Text.UTF8Encoding]::new($false))
+      - name: PowerShell Parser AST Windows
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+             (Join-Path (Get-Location) 'folderlan-mesh-parse.ps1'),
+             [ref]$tokens,[ref]$parseErrors)
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object { Write-Error ($_.Extent.StartLineNumber.ToString() + ': ' + $_.Message) }
+            throw 'FolderLAN PowerShell PS1 syntax test FAILED'
+          }
+          Write-Host ('PASS: PowerShell syntax, AST, ' + $tokens.Count + ' tokens')
