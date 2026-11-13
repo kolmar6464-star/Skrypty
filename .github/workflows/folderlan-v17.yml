@@ -217,6 +217,8 @@ jobs:
           cp android-gallery-v17/CameraWatcher.java app/src/main/java/pl/folderlan/android/CameraWatcher.java
           cp android-gallery-v17/PhonePeerService.java app/src/main/java/pl/folderlan/android/PhonePeerService.java
           python3 android-gallery-v17/patch_v17.py
+      - name: Reconnect to other authenticated SMB server if the first fails
+        run: python3 android-gallery-v17/patch_smb_retry.py
       - name: Build APK
         run: gradle --no-daemon :app:assembleDebug
       - name: Include local APK signing tools
