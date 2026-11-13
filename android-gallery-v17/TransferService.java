@@ -234,7 +234,7 @@ public final class TransferService extends Service {
     }
     private String numberedFilename(SharedPreferences prefs,Item item,int cursor) {
         String date=new SimpleDateFormat("yyyyMMdd",Locale.ROOT).format(new Date());
-        String key="seq_"+date;
+        String key=(item.camera ? "seq_camera_" : "seq_")+date;
         // Numeric filename allocated monotonically, even if Windows target changes.
         int next=prefs.getInt(key,1);
         prefs.edit().putInt(key,next+1).commit();
@@ -272,7 +272,7 @@ public final class TransferService extends Service {
                         }
                         currentUpload=session;
                         String target=item.camera ? "Zdjęcie z kamerki\\"+
-                            item.timeLabel.replace("|","\\")+"_"+file : file;
+                            item.timeLabel.replace("|"," - ")+"\\"+file : file;
                         // Use an existing device-independent SMB connection.
                         try(InputStream input=getContentResolver().openInputStream(item.uri)) {
                             if(input==null)throw new IOException("Zdjęcie nie jest dostępne.");
