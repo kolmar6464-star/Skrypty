@@ -25,6 +25,7 @@ public final class TransferService extends Service {
     private static final int NOTIFICATION=44139;
     private final ExecutorService executor=Executors.newSingleThreadExecutor();
     private final AtomicBoolean cancelled=new AtomicBoolean(false);
+    private static final Object SEND_LOCK=new Object();
     private final Object guard=new Object();
     private volatile boolean running;
     private volatile LanShare currentUpload;
@@ -69,8 +70,30 @@ public final class TransferService extends Service {
     }
     private static void sendQueue(Context ctx,JSONArray list) {
         if(list.length()==0)return;
-        Intent action=new Intent(ctx,TransferService.class).setAction(START)
-            .putExtra("photos",list.toString());
+        // Durably write work BEFORE requesting Android to start a foreground
+        // service. A rejected background start must not lose camera events.
+        synchronized(SEND_LOCK) {
+            SharedPreferences p=state(ctx);
+            try {
+                JSONArray existing=new JSONArray(p.getString("queue","[]"));
+                boolean active=p.getBoolean("active",false);
+                SharedPreferences.Editor edit=p.edit();
+                if(!active) {
+                    existing=new JSONArray();
+                    edit.putInt("done",0).putInt("success",0).putInt("errors",0)
+                        .putInt("next",0).putString("error","")
+                        .putString("batchId",UUID.randomUUID().toString())
+                        .putBoolean("completedPending",false);
+                }
+                for(int i=0;i<list.length();i++)existing.put(list.getJSONObject(i));
+                edit.putString("queue",existing.toString())
+                    .putInt("total",existing.length()).putBoolean("active",true)
+                    .putString("message","Przygotowano "+existing.length()+" zdjęć.").commit();
+            }catch(Exception error) {
+                throw new IllegalStateException("Nie mogę zapisać kolejki zdjęć.",error);
+            }
+        }
+        Intent action=new Intent(ctx,TransferService.class).setAction(START);
         if(Build.VERSION.SDK_INT>=26)ctx.startForegroundService(action);
         else ctx.startService(action);
     }
@@ -146,10 +169,7 @@ public final class TransferService extends Service {
         // Android requires foreground start immediately, before heavy IO.
         foreground(prefs.getInt("done",0),prefs.getInt("total",0),
             prefs.getString("message","Przygotowywanie kopiowania"));
-        if(START.equals(action) && intent!=null) {
-            String incoming=intent.getStringExtra("photos");
-            if(incoming!=null)appendQueue(prefs,incoming);
-        }
+        // The sender already persisted the queue atomically before this intent.
         if(prefs.getBoolean("active",false) && !running) {
             running=true;
             cancelled.set(false);
@@ -220,10 +240,11 @@ public final class TransferService extends Service {
                 catch(Exception e){throw new IOException("Nie można odczytać kolejki.",e);}
                 if(next>=queue.length())break;
                 Item item=Item.from(queue.getJSONObject(next));
-                String chosenName=prefs.getString("filename_"+next,"");
+                String storeKey="filename_"+prefs.getString("batchId","")+"_"+next;
+                String chosenName=prefs.getString(storeKey,"");
                 if(chosenName.isEmpty()) {
                     chosenName=numberedFilename(prefs,item,next);
-                    prefs.edit().putString("filename_"+next,chosenName).commit();
+                    prefs.edit().putString(storeKey,chosenName).commit();
                 }
                 String file=chosenName;
                 int success=prefs.getInt("success",0);
@@ -249,6 +270,16 @@ public final class TransferService extends Service {
                         prefs.edit().putInt("success",success).putInt("done",done)
                             .putInt("next",next+1).commit();
                         publish(prefs,"Skopiowano: "+success+" / "+queue.length());
+                        break;
+                    } catch(FileNotFoundException | SecurityException fileError) {
+                        // Lost phone media permissions or deleted photo is not a
+                        // network error. Report it and continue with the next item.
+                        int errors=prefs.getInt("errors",0)+1;
+                        int progress=prefs.getInt("done",0)+1;
+                        prefs.edit().putInt("errors",errors).putInt("done",progress)
+                            .putInt("next",next+1)
+                            .putString("error",fileError.getMessage()).commit();
+                        publish(prefs,"Pominięto niedostępne zdjęcie ("+errors+" błędów).");
                         break;
                     } catch(InterruptedIOException e) {
                         if(cancelled.get())break;
