@@ -1,4 +1,4 @@
-name: Build FolderLAN v17 Mesh Background Camera Phones
+name: Build FolderLAN v17.1 Camera Numbered SMB Mesh
 on:
   push:
     branches: [android-folderlan-apk]
@@ -219,6 +219,17 @@ jobs:
           python3 android-gallery-v17/patch_v17.py
       - name: Reconnect to other authenticated SMB server if the first fails
         run: python3 android-gallery-v17/patch_smb_retry.py
+      - name: Bump Android package version for in-place camera numbering update
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("app/build.gradle")
+          text=p.read_text(encoding="utf-8")
+          assert "versionCode 21" in text and "versionName '17.0'" in text
+          p.write_text(text.replace("versionCode 21","versionCode 22")
+                           .replace("versionName '17.0'","versionName '17.1'"),
+                       encoding="utf-8")
+          PY
       - name: Build APK
         run: gradle --no-daemon :app:assembleDebug
       - name: Include local APK signing tools
@@ -227,7 +238,7 @@ jobs:
           cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" ./zipalign
       - uses: actions/upload-artifact@v4
         with:
-          name: FolderLAN-v17-Mesh-Background-Phones-Camera
+          name: FolderLAN-v17_1-Camera-Numbered
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             apksigner.jar
