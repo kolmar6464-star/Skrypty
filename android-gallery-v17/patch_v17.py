@@ -23,6 +23,9 @@ g=replace(g,"        void onDelete(List<Item> entries);\n",
 ""","gallery handler")
 g=replace(g,"    private Button selectAll, clear, copy, cancel, delete;",
 "    private Button selectAll, clear, copy, cancel, delete, sendPhone;","send button field")
+g=replace(g,"    private boolean stopping;",
+"""    private boolean stopping;
+    private boolean galleryLoaded;""","persist gallery loading state")
 g=replace(g,"                    tick.setTextSize(23);",
 "                    tick.setTextSize(15);","image index typography")
 g=replace(g,"FrameLayout.LayoutParams tickParams = new FrameLayout.LayoutParams(dp(34), dp(34), Gravity.RIGHT | Gravity.TOP);",
@@ -54,8 +57,9 @@ g=replace(g,
         // Persist checks even if the activity is minimized or recreated.
         org.json.JSONArray saved=new org.json.JSONArray();
         for (Uri uri:selected)saved.put(uri.toString());
-        activity.getSharedPreferences("folderlan_gallery_checks",android.content.Context.MODE_PRIVATE)
-            .edit().putString("selected",saved.toString()).apply();
+        if(galleryLoaded)
+            activity.getSharedPreferences("folderlan_gallery_checks",android.content.Context.MODE_PRIVATE)
+                .edit().putString("selected",saved.toString()).apply();
     }
     /** Reload""","persist ticks")
 g=replace(g,
@@ -64,6 +68,7 @@ g=replace(g,
                 adapter.notifyDataSetChanged();""",
 """                photos.clear();
                 photos.addAll(found);
+                galleryLoaded=true;
                 // Restore photo checkmarks after Android killed/recreated MainActivity.
                 try {
                     org.json.JSONArray saved=new org.json.JSONArray(
@@ -175,6 +180,11 @@ m=replace(m,
                 PhonePeerService.setEnabled(this,true);
         }catch(Exception ignored){}
 ''',"watch transfer state while visible")
+m=replace(m,'''        foregroundActivity=true;
+        if (Build.VERSION.SDK_INT >= 34) {''',
+'''        foregroundActivity=true;
+        showTransferState();
+        if (Build.VERSION.SDK_INT >= 34) {''',"transfer completion summary after resume")
 m=replace(m,
 '''    @Override protected void onPause() {
         if (alarmReceiverRegistered) {''',
