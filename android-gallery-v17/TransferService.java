@@ -28,6 +28,7 @@ public final class TransferService extends Service {
     private static final Object SEND_LOCK=new Object();
     private final Object guard=new Object();
     private volatile boolean running;
+    private volatile boolean destroyed;
     private volatile LanShare currentUpload;
     private PowerManager.WakeLock cpu;
     private WifiManager.WifiLock wifi;
@@ -85,7 +86,20 @@ public final class TransferService extends Service {
                         .putString("batchId",UUID.randomUUID().toString())
                         .putBoolean("completedPending",false);
                 }
-                for(int i=0;i<list.length();i++)existing.put(list.getJSONObject(i));
+                // Camera observer may retry after Android refused to launch FGS.
+                // Do not enqueue the same captured photo more than once.
+                HashSet<String> cameraAlready=new HashSet<>();
+                for(int i=0;i<existing.length();i++){
+                    JSONObject entry=existing.getJSONObject(i);
+                    if(entry.optBoolean("camera",false))
+                        cameraAlready.add(entry.optString("uri",""));
+                }
+                for(int i=0;i<list.length();i++) {
+                    JSONObject entry=list.getJSONObject(i);
+                    if(entry.optBoolean("camera",false) &&
+                        !cameraAlready.add(entry.optString("uri","")))continue;
+                    existing.put(entry);
+                }
                 edit.putString("queue",existing.toString())
                     .putInt("total",existing.length()).putBoolean("active",true)
                     .putString("message","Przygotowano "+existing.length()+" zdjęć.").commit();
@@ -311,9 +325,18 @@ public final class TransferService extends Service {
             }
             publish(prefs,prefs.getString("message",""));
         }catch(Exception fatal){
-            prefs.edit().putBoolean("active",false)
-                .putString("message","Błąd kopiowania: "+fatal.getMessage())
-                .putBoolean("completedPending",true).commit();
+            if(destroyed && !cancelled.get()) {
+                // Android is destroying the service, not the user's upload
+                // request. Leave the durable queue active for START_STICKY
+                // or a future app launch to resume from saved 'next'.
+                prefs.edit().putBoolean("active",true)
+                    .putString("message","Kopiowanie wstrzymane. Wznowienie po uruchomieniu usługi.")
+                    .commit();
+            } else {
+                prefs.edit().putBoolean("active",false)
+                    .putString("message","Błąd kopiowania: "+fatal.getMessage())
+                    .putBoolean("completedPending",true).commit();
+            }
             publish(prefs,prefs.getString("message",""));
         }finally{
             currentUpload=null;
@@ -332,7 +355,7 @@ public final class TransferService extends Service {
         updateNotification(prefs.getInt("done",0),prefs.getInt("total",0),message);
     }
     @Override public void onDestroy(){
-        cancelled.set(true);
+        destroyed=true;
         if(currentUpload!=null)currentUpload.abortActiveUpload();
         releaseLocks();
         executor.shutdownNow();
