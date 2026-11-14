@@ -47,16 +47,10 @@ s=replace(s,
         long newest=last;
         long enabledSince=pref.getLong("enabledSince",0);''',
 "scan from enabled time")
-s=replace(s,
-'''                if(id>newest)newest=id;
-                if(c.getInt(5)!=0)continue;
-                String folder=c.getString(3);
-                if(folder==null)continue;
-                String lower=folder.replace('\\','/').toLowerCase(Locale.ROOT);
-                if(!(lower.startsWith("dcim/") && (lower.contains("camera") ||
-                    lower.equals("dcim/"))))continue;''',
-'''                // Pending images are still being written. Do NOT move the
-                // watermark beyond them; a later scan must retry after close.
+start=s.index("                if(id>newest)newest=id;")
+end=s.index("                String filename=c.getString(1);",start)
+camera_block=r"""                // Wait for the camera to finish writing this row. Do not move
+                // the watermark past a pending photo.
                 if(c.getInt(5)!=0)break;
                 long addedMs=c.getLong(2)*1000L;
                 if(id>newest)newest=id;
@@ -64,15 +58,14 @@ s=replace(s,
                 String folder=c.getString(3);
                 if(folder==null)continue;
                 String lower=folder.replace('\\','/').toLowerCase(Locale.ROOT);
-                // Camera folders differ by manufacturer. Never include
-                // screenshots, thumbnails, downloads or chat-app media.
                 boolean dcim=lower.startsWith("dcim/") &&
                     !lower.contains("screenshot") && !lower.contains("thumbnail") &&
                     !lower.contains("whatsapp") && !lower.contains("telegram");
                 boolean cameraPictures=lower.startsWith("pictures/camera") ||
                     lower.startsWith("pictures/aparat");
-                if(!dcim && !cameraPictures)continue;''',
-"skip pending and support OEM camera folders")
+                if(!dcim && !cameraPictures)continue;
+"""
+s=s[:start]+camera_block+s[end:]
 s=replace(s,'''        }catch(SecurityException ignored) {
             // User must allow full image/media access in Android Settings.
         }catch(Exception ignored){}''',
