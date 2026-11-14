@@ -121,7 +121,7 @@ addition='''    // Delete only a user-confirmed path within the authenticated SM
             else
                 share.rm(child);
         }
-        share.rmdir(path);
+        share.rmdir(path,false);
     }
 '''
 l=replace(l,anchor,addition+anchor,"SMB delete")
