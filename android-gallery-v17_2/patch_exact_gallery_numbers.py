@@ -128,7 +128,7 @@ addition='''    void uploadGalleryBatch(InputStream in,String fileName,String ba
             throw new IllegalArgumentException("Brak numeru zdjęcia z galerii");
         String day=galleryFolderForToday();
         mkdir(day);
-        String folder=day+"\\\\\\\\"+batchFolder;
+        String folder=day+"\\\\"+batchFolder;
         mkdir(folder);
         uploadInFolder(in,folder,fileName,cancelled,true);
     }
