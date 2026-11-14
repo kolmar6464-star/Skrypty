@@ -1,0 +1,249 @@
+name: Build FolderLAN v17.3 Camera and Remote Delete
+on:
+  push:
+    branches: [android-folderlan-apk]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Verify Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          test -f "$ANDROID_HOME/platforms/android-35/android.jar" || sdkmanager "platforms;android-35"
+          test -d "$ANDROID_HOME/build-tools/35.0.0" || sdkmanager "build-tools;35.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Unpack source
+        run: |
+          cat > /tmp/project.b64 <<'SRC'
+          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
+          LJjnf9kRbhNyxA==
+          SRC
+          base64 -d /tmp/project.b64 | zstd -dc | tar -x
+      - name: Remove pairing input and enable automatic connection
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/java/pl/folderlan/android/MainActivity.java')
+          s=p.read_text()
+          a=s.index('    @Override public void onCreate(Bundle state) {')
+          b=s.index('    private TextView label(',a)
+          s=s[:a]+'''    @Override public void onCreate(Bundle state) {
+                  super.onCreate(state);
+                  buildUi();
+                  connect();
+              }
+          '''+s[b:]
+          s=s.replace('    private SecretVault vault;\n','').replace('    private EditText pairField;\n','')
+          a=s.index('        main.addView(label("Kod parowania')
+          b=s.index('        main.addView(button("Połącz',a)
+          s=s[:a]+'        main.addView(label("Łączenie automatyczne — bez hasła i kodu.", 14));\n'+s[b:]
+          s=s.replace('Rozłącz i zapomnij parowanie','Rozłącz')
+          a=s.index('    private void connect() {')
+          b=s.index('    private void refresh() {',a)
+          s=s[:a]+'''    private String readPairingAsset() throws Exception {
+                  byte[] buffer = new byte[128];
+                  try (InputStream in = getAssets().open("pairing_key.txt")) {
+                      int length = in.read(buffer);
+                      if (length <= 0) throw new java.io.IOException("Missing local pairing key");
+                      String value = new String(buffer, 0, length, java.nio.charset.StandardCharsets.US_ASCII).trim();
+                      if (value.length() != 44) throw new java.io.IOException("Invalid pairing key length");
+                      return value;
+                  }
+              }
+              private void connect() {
+                  String pairing;
+                  try { pairing = readPairingAsset(); }
+                  catch (Exception e) { setStatus("Błąd konfiguracji aplikacji."); return; }
+                  work("Wyszukiwanie udziału Wi-Fi…", () -> {
+                      LanShare next = new LanShare(pairing);
+                      try { next.connect(getApplicationContext()); }
+                      catch (Exception e) { next.close(); throw e; }
+                      if (remote != null) remote.close();
+                      remote = next;
+                      currentPath = "";
+                      setStatus("Połączono: " + next.hostLabel());
+                      refreshInternal();
+                  });
+              }
+          '''+s[b:]
+          s=s.replace('        vault.clear(); pairField.setTag(null); pairField.setText("");\n','')
+          s=s.replace('Usuwa zapisany kod parowania tylko z tego telefonu. Nie usuwa plików na komputerze.','Zamyka połączenie na telefonie. Nie usuwa plików na komputerze.')
+          s=s.replace('items.removeAllViews(); currentPath = ""; setStatus("Rozłączono");','items.removeAllViews(); currentPath = ""; setStatus("Rozłączono. Dotknij Połącz, aby połączyć ponownie.");')
+          p.write_text(s)
+          asset=Path('app/src/main/assets/pairing_key.txt')
+          asset.parent.mkdir(parents=True,exist_ok=True)
+          asset.write_text('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\n')
+          b=Path('app/build.gradle')
+          build=b.read_text().replace('versionCode 1','versionCode 2').replace("versionName '1.0'","versionName '2.0'")
+          b.write_text(build)
+          PY
+      - name: Enable in-app gallery with select all and reliable copy
+        run: |
+          cp android-gallery-v3/GalleryPanel.java app/src/main/java/pl/folderlan/android/GalleryPanel.java
+          python3 android-gallery-v3/patch_main.py
+      - name: Add cancellation, hidden-file filtering, daily upload folders, and media library
+        run: |
+          python3 android-gallery-v4/patch_share.py
+          python3 android-gallery-v4/patch_gallery.py
+          cp android-gallery-v5/MainActivity.java app/src/main/java/pl/folderlan/android/MainActivity.java
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/AndroidManifest.xml')
+          s=p.read_text()
+          s=s.replace('<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />', '<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />')
+          p.write_text(s)
+          b=Path('app/build.gradle')
+          s=b.read_text().replace('versionCode 3','versionCode 5').replace("versionName '3.0'","versionName '5.0'")
+          b.write_text(s)
+          PY
+      - name: Add Find Phone foreground listener and permissions
+        run: |
+          cp android-gallery-v6/FindPhoneService.java app/src/main/java/pl/folderlan/android/FindPhoneService.java
+          python3 android-gallery-v6/patch_finder.py
+      - name: Set phone presence app version 7
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/build.gradle')
+          s=p.read_text()
+          s=s.replace('versionCode 6', 'versionCode 7').replace("versionName '6.0'", "versionName '7.0'")
+          p.write_text(s)
+          PY
+      - name: Repair Wi-Fi discovery and immediate SMB transfer abort
+        run: python3 android-gallery-v8/patch_discovery_cancel.py
+      - name: Restore connectivity after Windows reinstall or hostname change
+        run: python3 android-gallery-v9/patch_auto_reconnect.py
+      - name: Preserve photo selection after copying
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/java/pl/folderlan/android/GalleryPanel.java')
+          code=p.read_text(encoding='utf-8')
+          old='        selected.removeAll(successes);'
+          assert code.count(old)==1, 'gallery selection state changed unexpectedly'
+          code=code.replace(old, '        // Keep check marks after successful copying, so the same photos can be deleted manually.',1)
+          p.write_text(code,encoding='utf-8')
+          gradle=Path('app/build.gradle')
+          config=gradle.read_text(encoding='utf-8')
+          assert "versionCode 9" in config and "versionName '9.0'" in config
+          gradle.write_text(config.replace('versionCode 9','versionCode 10').replace("versionName '9.0'","versionName '10.0'"),encoding='utf-8')
+          PY
+      - name: Temporarily maximize phone alarm volume while locating
+        run: python3 android-gallery-v11/patch_max_alert.py
+      - name: Restore gallery and enhance Find Phone lock-screen alarm
+        run: |
+          cp android-gallery-v12/FindPhoneAlarmActivity.java app/src/main/java/pl/folderlan/android/FindPhoneAlarmActivity.java
+          python3 android-gallery-v12/patch_alarm_screen.py
+      - name: v12.1 only - persistent phone listener and remote file/photo preview
+        run: |
+          cp android-gallery-v12_1/RemoteFilePreview.java app/src/main/java/pl/folderlan/android/RemoteFilePreview.java
+          cp android-gallery-v12_1/FindPhoneBootReceiver.java app/src/main/java/pl/folderlan/android/FindPhoneBootReceiver.java
+          python3 android-gallery-v12_1/patch_v12_auto_listener_preview.py
+      - name: 'v12.2 in-app gallery and full-screen Find Phone alarm'
+        run: python3 android-gallery-v12_2/patch_gallery_and_lock_screen.py
+      - name: Authenticate remaining SMB peers and recover after old host removal
+        run: python3 android-gallery-v12_3/patch_multi_pc_host_failover.py
+      - name: Verify in-app gallery is never replaced by Android photo picker
+        run: python3 android-gallery-v12_4/patch_permission_only.py
+      - name: Copy progress and red alert over open application
+        run: python3 android-gallery-v12_5/patch_progress_foreground_alarm.py
+      - name: Upgrade v12.5 to v17 persistent SMB transfers and camera or phone services
+        run: |
+          cp android-gallery-v17/TransferService.java app/src/main/java/pl/folderlan/android/TransferService.java
+          cp android-gallery-v17/CameraWatcher.java app/src/main/java/pl/folderlan/android/CameraWatcher.java
+          cp android-gallery-v17/PhonePeerService.java app/src/main/java/pl/folderlan/android/PhonePeerService.java
+          python3 android-gallery-v17/patch_v17.py
+      - name: Reconnect to other authenticated SMB server if the first fails
+        run: python3 android-gallery-v17/patch_smb_retry.py
+      - name: Bump Android package version for in-place camera numbering update
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("app/build.gradle")
+          text=p.read_text(encoding="utf-8")
+          assert "versionCode 21" in text and "versionName '17.0'" in text
+          p.write_text(text.replace("versionCode 21","versionCode 22")
+                           .replace("versionName '17.0'","versionName '17.1'"),
+                       encoding="utf-8")
+          PY
+      - name: Keep photo gallery displayed numbers in SMB filenames
+        run: python3 android-gallery-v17_2/patch_exact_gallery_numbers.py
+      - name: Camera capture fix and confirmed remote SMB deletion
+        run: python3 android-gallery-v17_3/patch_camera_and_remote_delete.py
+      - name: Build APK
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Include local APK signing tools
+        run: |
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" ./apksigner.jar
+          cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" ./zipalign
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FolderLAN-v17_3-Camera-SMB-Delete
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            apksigner.jar
+            zipalign
